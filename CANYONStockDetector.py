@@ -50,20 +50,22 @@ def crawler_mail(inc):
 def getData(baseurl):
     namelist = []
     statuslist = []
-    print("Asking URL ... ")
     html = askURL(baseurl)
     # 2.逐一解析数据
     soup = BeautifulSoup(html, "html.parser")
     # 查找商品名称 name
-    print("Finding bike name in HTML ...")
+    print("Finding bike name ...")
     for name in soup.find_all('div', class_="productTile__productName"):
         name = str(name)
         name_line = name.split('\n')
         name = name_line[1].lstrip()
         namelist.append(name)
-    print(namelist[0])
+    if len(namelist) > 0:
+        print("Bike was found successfully!")
+    else:
+        print("No bike")
     # 查找商品库存状态 status
-    print("Finding bike stock status in HTML ...")
+    print("Finding bike stock status ...")
     for status in soup.find_all('div', class_="productTile__badgeContainer"):
         whole_status = str(status)
         line_status = whole_status.split('\n')
@@ -72,7 +74,8 @@ def getData(baseurl):
         else:
             status = "available"
         statuslist.append(status)
-    print(statuslist[0])
+    if len(statuslist) > 0:
+        print("Bike status was found successfully!")
     return namelist, statuslist
 
 
@@ -83,16 +86,22 @@ def askURL(url):
     }  # 用户代理，表示告诉网站我们是什么类型的机器、浏览器
     request = urllib.request.Request(url, headers=head)
     html = ""
-    try:
-        # 请求打开url地址内容，超时timeout报错
-        response = urllib.request.urlopen(request, timeout=10)
-        html = response.read().decode("utf-8")
-        print("HTML was found successfully!")
-    except urllib.error.URLError as e:
-        if hasattr(e, "code"):
-            print(e.code)
-        if hasattr(e, "reason"):
-            print(e.reason)
+    askurl_error_cnt = 0
+    while True:
+        try:
+            if askurl_error_cnt >= 5:
+                print("Already try 5 times, break")
+                break
+            # 请求打开url地址内容，超时timeout报错
+            print("Asking URL ... ")
+            response = urllib.request.urlopen(request, timeout=10)
+            html = response.read().decode("utf-8")
+            print("Asked URL successfully!")
+        except:
+            askurl_error_cnt += 1
+            print("Asked URL failed, try again ...", askurl_error_cnt)
+        else:
+            break
     return html
 
 
