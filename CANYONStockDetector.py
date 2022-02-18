@@ -8,40 +8,34 @@ from datetime import datetime  # 打印系统时间
 from email.header import Header  # 用于构建邮件头
 from email.mime.text import MIMEText  # email 用于构建邮件内容
 from threading import Timer  # 固定周期爬虫
-
 from bs4 import BeautifulSoup  # 网页解析，获取数据
 
-AeroadUrl = "https://www.canyon.com/en-de/road-bikes/aero-bikes/aeroad/"
-InfliteUrl = "https://www.canyon.com/en-de/road-bikes/cyclocross-bikes/inflite/"
-UltimateUlr = "https://www.canyon.com/en-de/road-bikes/race-bikes/ultimate/"
-
+AeroadUrl = "https://www.canyon.com/en-de/aeroad-cf-sl-8-disc/50005902.html?utm_source=row-journey&utm_medium=email&utm_campaign=row_back_in_stock&src=03awtk"
 
 # 定时执行的内容
 def crawler_mail(inc):
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # 1.爬取商品名称和状态
     print("Searching Aeroad stock status ... ")
-    (Aer_nam, Aer_sts) = getData(AeroadUrl)
-    bike_name = Aer_nam
+    (Aer_size, Aer_sts) = getData(AeroadUrl)
+    bike_name = Aer_size
     bike_stock = Aer_sts
     # 2.发送邮件
     # 2.1 确认是否要发送邮件
     send_email_or_not = 0
-    for sts in bike_stock:
-        if sts == "available":
+    if len(bike_name) > 0 and len(bike_stock) > 0:
+        if bike_name[4] == "M" and bike_stock[4].find("stock") != -1:
             send_email_or_not = 1
     # 2.2 拼接邮件消息内容
-    massage_content = ""
-    for i in range(1, len(bike_stock)):
-        if bike_stock[i] == "available":
-            massage_content = massage_content + bike_name[i] + ": " + bike_stock[i] + "\n"
-    print(massage_content)
+    if len(bike_name) > 0 and len(bike_stock) > 0:
+        massage_content = "Aeroad CF SL8 Blue, size " + bike_name[4] + ": " + bike_stock[4].lstrip()
+        print("massage content: ", massage_content)
     # 2.3 发出邮件
     if send_email_or_not == 1:
         print("Bike is available, so E-mail will be sent.")
         sendEmail(massage_content)
     else:
-        print("Bike is unavailable.")
+        print("Bike is unavailable \n")
     t = Timer(inc, crawler_mail, (inc,))
     t.start()
 
@@ -55,27 +49,27 @@ def getData(baseurl):
     soup = BeautifulSoup(html, "html.parser")
     # 查找商品名称 name
     print("Finding bike name ...")
-    for name in soup.find_all('div', class_="productTile__productName"):
+
+    for name in soup.find_all('div', class_="productConfiguration__variantType"):
         name = str(name)
         name_line = name.split('\n')
-        name = name_line[1].lstrip()
-        namelist.append(name)
+        size = name_line[1].lstrip()
+        namelist.append(size)
     if len(namelist) > 0:
-        print("Bike was found successfully!")
+        print("Bike size was found successfully!")
     else:
         print("No bike")
     # 查找商品库存状态 status
     print("Finding bike stock status ...")
-    for status in soup.find_all('div', class_="productTile__badgeContainer"):
+    for status in soup.find_all('div', class_="productConfiguration__availabilityMessage"):
         whole_status = str(status)
         line_status = whole_status.split('\n')
-        if line_status[1].find("isUnavailable") > 0:
-            status = "unavailable"
-        else:
-            status = "available"
+        status = line_status[1]
         statuslist.append(status)
     if len(statuslist) > 0:
         print("Bike status was found successfully!")
+    else:
+        print("No bike status")
     return namelist, statuslist
 
 
